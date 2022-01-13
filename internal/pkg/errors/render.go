@@ -92,13 +92,21 @@ func (tnp ErrTemplateExecError) Error() string {
 
 func (tnp ErrTemplateNilPointerError) Error() string {
 	nilVarName := strings.TrimSuffix(tnp.At, fmt.Sprintf(".%s", tnp.Executing))
-	return fmt.Sprintf("nil pointer evaluating %q in %q (%s).%s", nilVarName, tnp.At, tnp.Template, tnp.didYouMean(nilVarName))
+	return fmt.Sprintf("nil pointer evaluating %q in %q.(%s).%s%s", nilVarName, tnp.At, tnp.Template, tnp.didYouMean(tnp.At), tnp.validValues())
+}
+
+func (tnp ErrTemplateExecError) validValues() string {
+	keys := getAllKeys(tnp.vars)
+	for i, k := range keys {
+		keys[i] = fmt.Sprintf("     %q", k)
+	}
+	return fmt.Sprintf("\n\n Valid values are:\n%s", strings.Join(keys, "\n"))
 }
 
 func (tnp ErrTemplateExecError) didYouMean(varName string) string {
 	dist := 5
 	out := ""
-	keys := getAllKeys(tnp.vars, "")
+	keys := getAllKeys(tnp.vars)
 	for _, key := range keys {
 		keyDist := levenshtein.DistanceForStrings([]rune(varName), []rune(key), levenshtein.DefaultOptions)
 		if keyDist < dist {
@@ -108,12 +116,12 @@ func (tnp ErrTemplateExecError) didYouMean(varName string) string {
 	}
 
 	if out != "" {
-		return fmt.Sprintf(" Did you mean %q?", out)
+		return fmt.Sprintf("\n\n Did you mean %q?", out)
 	}
 	return ""
 }
 
-func getAllKeys(inMap map[string]interface{}, path string) []string {
+func getAllKeys(inMap map[string]interface{}) []string {
 	out := make([]string, 0)
 	getKeys(inMap, "", &out)
 	return out
