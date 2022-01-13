@@ -4,6 +4,7 @@
 package renderer
 
 import (
+	stdErrors "errors"
 	"fmt"
 	"path"
 	"strings"
@@ -11,10 +12,10 @@ import (
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclwrite"
-	"github.com/hashicorp/nomad/api"
-
+	"github.com/hashicorp/nomad-pack/internal/pkg/errors"
 	"github.com/hashicorp/nomad-pack/internal/pkg/variable/parser"
 	"github.com/hashicorp/nomad-pack/sdk/pack"
+	"github.com/hashicorp/nomad/api"
 )
 
 type PackTemplateContext = parser.PackTemplateContext
@@ -130,7 +131,17 @@ func (r *Renderer) Render(p *pack.Pack, variables *parser.ParsedVariables) (*Ren
 
 		dot := src.getDot()
 		if err := tpl.ExecuteTemplate(&buf, name, dot); err != nil {
-			return nil, fmt.Errorf("failed to render %s: %w", name, err)
+			execErr := errors.NewErrRenderError(err, src.variables)
+			var etnp errors.ErrTemplateNilPointerError
+			if stdErrors.As(execErr, &etnp) {
+				return nil, fmt.Errorf("failed to render %s: %w", name, etnp)
+			}
+			var etee errors.ErrTemplateExecError
+			if stdErrors.As(execErr, &etee) {
+				return nil, fmt.Errorf("failed to render %s: %w", name, etee)
+			}
+			return nil, fmt.Errorf("failed to render %s: %v", name, execErr)
+			// return nil, fmt.Errorf("failed to render %s: %v", name, err)
 		}
 
 		// Even when using "missingkey=zero", missing values will be rendered
