@@ -45,3 +45,8 @@ check-sdk: ## Checks the SDK is isolated
 		then echo " /sdk package depends the ^^ above internal packages. Remove such dependency"; \
 		exit 1; fi
 	@echo "==> Done"
+
+.PHONY: gen/website-mdx
+gen/website-mdx:
+	go run ./tools/gendocs
+	cd ./website; npx --no-install next-hashicorp format

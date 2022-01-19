@@ -71,7 +71,7 @@ func Main(args []string) int {
 
 	// Get our base command
 	fset := flag.NewSets()
-	base, commands := Commands(ctx, log, logOutput, WithFlags((fset)))
+	base, commands := Commands(ctx, log, logOutput, WithFlags(fset))
 	defer base.Close()
 
 	// Build the CLI. We use a
