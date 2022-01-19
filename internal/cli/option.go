@@ -1,7 +1,7 @@
 package cli
 
 import (
-	flag "github.com/hashicorp/nomad-pack/flag"
+	"github.com/hashicorp/nomad-pack/internal/pkg/flag"
 	"github.com/hashicorp/nomad-pack/terminal"
 )
 

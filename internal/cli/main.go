@@ -4,10 +4,14 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
 	"sort"
 	"text/tabwriter"
 
-	flag "github.com/hashicorp/nomad-pack/flag"
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/nomad-pack/internal/pkg/flag"
 	"github.com/hashicorp/nomad-pack/internal/pkg/version"
 	"github.com/mitchellh/cli"
 	"github.com/mitchellh/go-glint"
@@ -42,6 +46,7 @@ var (
 	// Initialize hidden commands. Anything we add here will be ignored when
 	// we print out the full list of commands
 	hiddenCommands = map[string]struct{}{}
+	ExposeDocs     bool
 )
 
 // Main runs the CLI with the given arguments and returns the exit code.
@@ -54,13 +59,19 @@ func Main(args []string) int {
 		args[1] = "--version"
 	}
 
+	// Initialize our logger based on env vars
+	args, log, logOutput, err := logger(args)
+	if err != nil {
+		panic(err)
+	}
+
 	// Build our cancellation context
 	ctx, closer := WithInterrupt(context.Background())
 	defer closer()
 
 	// Get our base command
 	fset := flag.NewSets()
-	base, commands := Commands(ctx, WithFlags((fset)))
+	base, commands := Commands(ctx, log, logOutput, WithFlags((fset)))
 	defer base.Close()
 
 	// Build the CLI. We use a
@@ -102,12 +113,18 @@ func Main(args []string) int {
 // Commands returns the map of commands that can be used to initialize a CLI.
 func Commands(
 	ctx context.Context,
+	log hclog.Logger,
+	logOutput io.Writer,
 	opts ...Option,
 ) (*baseCommand, map[string]cli.CommandFactory) {
 	baseCommand := &baseCommand{
 		Ctx:           ctx,
+		Log:           log,
+		LogOutput:     logOutput,
 		globalOptions: opts,
 	}
+
+	aliases := map[string]string{}
 
 	// start building our commands
 	commands := map[string]cli.CommandFactory{
@@ -174,7 +191,85 @@ func Commands(
 			}, nil
 		},
 	}
+
+	if ExposeDocs {
+		commands["cli-docs"] = func() (cli.Command, error) {
+			return &DocsCommand{
+				baseCommand: baseCommand,
+				commands:    commands,
+				aliases:     aliases,
+			}, nil
+		}
+	}
+
 	return baseCommand, commands
+}
+
+// logger returns the logger to use for the CLI. Output, level, etc. are
+// determined based on environment variables if set.
+func logger(args []string) ([]string, hclog.Logger, io.Writer, error) {
+	app := args[0]
+
+	// Determine our log level if we have any. First override we check if env var
+	level := hclog.NoLevel
+	if v := os.Getenv(EnvLogLevel); v != "" {
+		level = hclog.LevelFromString(v)
+		if level == hclog.NoLevel {
+			return nil, nil, nil, fmt.Errorf("%s value %q is not a valid log level", EnvLogLevel, v)
+		}
+	}
+
+	// Process arguments looking for `-v` flags to control the log level.
+	// This overrides whatever the env var set.
+	var outArgs []string
+	for i, arg := range args {
+		if len(arg) != 0 && arg[0] != '-' {
+			outArgs = append(outArgs, arg)
+			continue
+		}
+
+		// If we hit a break indicating pass-through flags, we add them all to
+		// outArgs and just exit, since we don't want to process any secondary
+		//  `-v` flags at this time.
+		if arg == "--" {
+			outArgs = append(outArgs, args[i:]...)
+			break
+		}
+
+		switch arg {
+		case "-v":
+			if level == hclog.NoLevel || level > hclog.Info {
+				level = hclog.Info
+			}
+		case "-vv":
+			if level == hclog.NoLevel || level > hclog.Debug {
+				level = hclog.Debug
+			}
+		case "-vvv":
+			if level == hclog.NoLevel || level > hclog.Trace {
+				level = hclog.Trace
+			}
+		default:
+			outArgs = append(outArgs, arg)
+		}
+	}
+
+	// Default output is nowhere unless we enable logging.
+	var output io.Writer = ioutil.Discard
+	color := hclog.ColorOff
+	if level != hclog.NoLevel {
+		output = os.Stderr
+		color = hclog.AutoColor
+	}
+
+	logger := hclog.New(&hclog.LoggerOptions{
+		Name:   app,
+		Level:  level,
+		Color:  color,
+		Output: output,
+	})
+
+	return outArgs, logger, output, nil
 }
 
 func GroupedHelpFunc(f cli.HelpFunc) cli.HelpFunc {
