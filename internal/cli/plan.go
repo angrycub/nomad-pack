@@ -108,10 +108,8 @@ func (c *PlanCommand) Run(args []string) int {
 	}
 
 	planExitCode, planErrs := jobRunner.PlanDeployment(c.ui, errorContext)
-	if planErrs != nil {
-		for _, planErrs := range planErrs {
-			c.ui.ErrorWithContext(planErrs.Err, planErrs.Subject, planErrs.Context.GetAll()...)
-		}
+	for _, planErrs := range planErrs {
+		c.ui.ErrorWithContext(planErrs.Err, planErrs.Subject, planErrs.Context.GetAll()...)
 	}
 
 	if planExitCode < 2 {
