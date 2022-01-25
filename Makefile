@@ -46,7 +46,7 @@ check-sdk: ## Checks the SDK is isolated
 		exit 1; fi
 	@echo "==> Done"
 
-.PHONY: gen/website-mdx
-gen/website-mdx:
+.PHONY: cli-docs
+cli-docs:
 	go run ./tools/gendocs
-	cd ./website; npx --no-install next-hashicorp format
+	## cd ./website; npx --no-install next-hashicorp format
