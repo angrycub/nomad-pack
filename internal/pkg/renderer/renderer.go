@@ -105,7 +105,7 @@ func (r *Renderer) Render(p *pack.Pack, variables *parser.ParsedVariables) (*Ren
 	for name, src := range filesToRender {
 		if tpl.Lookup(name) == nil {
 			if _, err := tpl.New(name).Parse(src.content); err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to parse %s: %w", name, template.ExecError{Name: name, Err: err})
 			}
 		}
 	}

@@ -49,6 +49,10 @@ func funcMap(r *Renderer) template.FuncMap {
 		f["nomadNamespaces"] = nomadNamespaces(r.Client)
 		f["nomadNamespace"] = nomadNamespace(r.Client)
 		f["nomadRegions"] = nomadRegions(r.Client)
+		f["nomadMembers"] = nomadMembers(r.Client)
+		f["nomadRawRequest"] = nomadRawAPIRequest(r.Client)
+		f["nomadIsEnt"] = nomadIsEnterprise(r.Client)
+		f["nomadAPIClient"] = nomadClient(r.Client)
 	}
 
 	// Add additional custom functions.
@@ -89,6 +93,44 @@ func nomadNamespace(client *api.Client) func(string) (*api.Namespace, error) {
 // call.
 func nomadRegions(client *api.Client) func() ([]string, error) {
 	return func() ([]string, error) { return client.Regions().List() }
+}
+
+// nomadMembers performs a listing of the Nomad server members from the Nomad
+// API. It returns these within a list along with any error whilst performing
+// the API call.
+func nomadMembers(client *api.Client) func() ([]*api.AgentMember, error) {
+	return func() ([]*api.AgentMember, error) {
+		sm, err := client.Agent().Members()
+		return sm.Members, err
+	}
+}
+
+// nomadMembers performs a listing of the Nomad server members from the Nomad
+// API. It returns these within a list along with any error whilst performing
+// the API call.
+func nomadIsEnterprise(client *api.Client) func() (bool, error) {
+	return func() (bool, error) {
+		sm, err := client.Agent().Members()
+		if err != nil {
+			return false, err
+		}
+		for _, s := range sm.Members {
+			if r, ok := s.Tags["region"]; ok && r == sm.ServerRegion && strings.HasSuffix(s.Tags["build"], "+ent") {
+				return true, nil
+			}
+		}
+		return false, nil
+	}
+}
+
+func nomadClient(client *api.Client) func() *api.Client {
+	return func() *api.Client {
+		return client
+	}
+}
+
+func nomadRawAPIRequest(client *api.Client) func() *api.Raw {
+	return func() *api.Raw { return client.Raw() }
 }
 
 // toStringList takes a list of string and returns the HCL equivalent which is
