@@ -33,6 +33,7 @@ require (
 	github.com/lab47/vterm v0.0.0-20211107042118-80c3d2849f9c
 	github.com/mattn/go-isatty v0.0.20
 	github.com/mitchellh/cli v1.1.5
+	github.com/mitchellh/copystructure v1.2.0
 	github.com/mitchellh/go-glint v0.0.0-20210722152315-6515ceb4a127
 	github.com/mitchellh/go-wordwrap v1.0.1
 	github.com/morikuni/aec v1.0.0
@@ -43,6 +44,7 @@ require (
 	github.com/spf13/afero v1.9.5
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.9.0
+	github.com/texttheater/golang-levenshtein/levenshtein v0.0.0-20200805054039-cae8b0eaed6c
 	github.com/zclconf/go-cty v1.14.0
 	golang.org/x/exp v0.0.0-20231219180239-dc181d75b848
 	golang.org/x/term v0.19.0
@@ -215,7 +217,6 @@ require (
 	github.com/mattn/go-runewidth v0.0.12 // indirect
 	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
 	github.com/miekg/dns v1.1.56 // indirect
-	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/go-ps v0.0.0-20190716172923-621e5597135b // indirect
 	github.com/mitchellh/go-testing-interface v1.14.2-0.20210821155943-2d9075ca8770 // indirect
